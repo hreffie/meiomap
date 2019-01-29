@@ -47,8 +47,8 @@ def preproc(infile):
     data.replace(to_replace='AB', value='1', inplace=True)
     data.replace(to_replace='BB', value='2', inplace=True)
     data.replace('NC', np.NaN, inplace=True)
-    data.dropna(how='all')
-    data.reset_index(drop=True, inplace=True)
+    data.dropna(inplace=True)
+    #data.reset_index(drop=True, inplace=True)
 
     # Create a list of empty list to be filled in by chr,pos and phase.
     _1PB1 = []
@@ -81,6 +81,7 @@ def preproc(infile):
         # Merge data frames and set stop pos = start pos for default stop pos.
         cells[x] = pd.DataFrame(
             {'Chr': data['Chr'], 'Start': data['Position'], 'Stop': data['Position'], 'Phase': cells[x]})
+        cells[x].reset_index(drop=True, inplace=True)
 
     return cells
 
@@ -95,8 +96,8 @@ def cluster_phase(infile):
             if cells[x].loc[i, 'Phase'] == cells[x].loc[i + 1, 'Phase']:
                 cells[x].loc[i + 1, 'Start'] = cells[x].loc[i, 'Start']
                 # Remove duplicates]
-        cells[x].reset_index(drop=True, inplace=True)
-        cells[x].drop_duplicates(subset='Start',keep='last', inplace=True)
+            cells[x].drop_duplicates(subset='Start',keep='last', inplace=True)
+    print(cells[0])
     return cells
 
 

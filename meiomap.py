@@ -24,6 +24,7 @@ def parse_arguments():
 # Preprocessing of data
 def preproc(infile):
     # View all columns
+    pd.options.mode.chained_assignment = None
     pd.set_option('display.max_columns', None)
 
     # Read input data
@@ -46,11 +47,10 @@ def preproc(infile):
     data.replace(to_replace='AB', value='1', inplace=True)
     data.replace(to_replace='BB', value='2', inplace=True)
     data.replace('NC', np.NaN, inplace=True)
-    data.dropna(inplace=True)
+    data.dropna(how='all')
+    data.reset_index(drop=True, inplace=True)
 
     # Create a list of empty list to be filled in by chr,pos and phase.
-
-    cellnames = '_1PB1', '_1PB2', 'Egg1', '_2PB1', '_2PB2', 'Egg2', '_3PB1', '_3PB2', 'Egg3', '_4PB1', '_4PB2', 'Egg4'
     _1PB1 = []
     _1PB2 = []
     Egg1 = []
@@ -64,6 +64,7 @@ def preproc(infile):
     _4PB2 = []
     Egg4 = []
     cells = [_1PB1, _1PB2, Egg1, _2PB1, _2PB2, Egg2, _3PB1, _3PB2, Egg3, _4PB1, _4PB2, Egg4]
+    #cells = [[] for i in range(12)]
     x = 0
     # Compare SNPs to REF for phasing and add to empty list of each cell
     for x in range(0, 11):
@@ -77,30 +78,29 @@ def preproc(infile):
             else:
                 cells[x].append('0')
 
-        # Merge data frames and set stop pos = start pos
+        # Merge data frames and set stop pos = start pos for default stop pos.
         cells[x] = pd.DataFrame(
             {'Chr': data['Chr'], 'Start': data['Position'], 'Stop': data['Position'], 'Phase': cells[x]})
-        cells[x].reset_index(drop=True, inplace=True)
+
     return cells
 
 
 # Cluster range of phases
 def cluster_phase(infile):
     cells = preproc(infile)
-    # Cluster phase areas
-    # _1PB1, _1PB2, Egg1, _2PB1, _2PB2, Egg2, _3PB1, _3PB2, Egg3, _4PB1, _4PB2, Egg4 = [i for i in cells]
-    #
+
     # Set first start position in phase equal to all start position in phase for phase range
     for x in range(0, 11):
         for i in range(0, len(cells[x]) - 1):
             if cells[x].loc[i, 'Phase'] == cells[x].loc[i + 1, 'Phase']:
                 cells[x].loc[i + 1, 'Start'] = cells[x].loc[i, 'Start']
-                # Remove duplicates
-                cells[x].drop_duplicates(subset=['Start'], keep='last')
-
+                # Remove duplicates]
+        cells[x].reset_index(drop=True, inplace=True)
+        cells[x].drop_duplicates(subset='Start',keep='last', inplace=True)
     return cells
 
 
+#Write files to bed files
 def write_bed(infile, outdir):
     files = cluster_phase(infile)
     filenames = ['_1PB1', '_1PB2', 'Egg1', '_2PB1', '_2PB2', 'Egg2', '_3PB1', '_3PB2', 'Egg3', '_4PB1', '_4PB2', 'Egg4']

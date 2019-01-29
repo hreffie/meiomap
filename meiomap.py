@@ -9,7 +9,8 @@ import os
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description='''Simple implementation of the pilot stage of haplotype phasing of oocytes. The input file is a tab
-           delimited text file.''')
+           delimited text file. Output is in a BED file format:
+    chr     start   stop    phase.''')
     parser.add_argument('--infile', dest='infile', type=argparse.FileType('r', encoding='UTF-8'),
                         required=True,
                         help="Input file is a tab delimited text file containing Chr, Pos, Maternal Genotype, Reference Genotype, Cell Genotype")
@@ -28,16 +29,13 @@ def preproc(infile):
     pd.set_option('display.max_columns', None)
 
     # Read input data
-    df = pd.read_csv(infile, sep="\t", names=['Name', 'Chr', 'Position', 'gDNAGType', '1PB1GType', '1PB2GType',
-                                              '1eggGType', '2PB1GType', '2PB2GType', '2eggGType',
-                                              '3PB1GType', '3PB2GType', '3eggGType', '4PB1GType', '4PB2GType',
-                                              '4eggGType'])
+    df = pd.read_csv(infile, sep="\t")
 
     # Extract relevant maternal genotype (heterozygous mothers)
-    data = df[df['gDNAGType'] == 'AB']
+    data = df[df['gDNA.GType'] == 'AB']
 
     # Extract reference genotype
-    ref = data['1eggGType']
+    ref = data['1.egg.GType']
 
     # Reorder reference columns for clarity
     data.insert(4, 'Ref', ref)
@@ -48,7 +46,6 @@ def preproc(infile):
     data.replace(to_replace='BB', value='2', inplace=True)
     data.replace('NC', np.NaN, inplace=True)
     data.dropna(inplace=True)
-    #data.reset_index(drop=True, inplace=True)
 
     # Create a list of empty list to be filled in by chr,pos and phase.
     _1PB1 = []
@@ -64,10 +61,9 @@ def preproc(infile):
     _4PB2 = []
     Egg4 = []
     cells = [_1PB1, _1PB2, Egg1, _2PB1, _2PB2, Egg2, _3PB1, _3PB2, Egg3, _4PB1, _4PB2, Egg4]
-    #cells = [[] for i in range(12)]
-    x = 0
+
     # Compare SNPs to REF for phasing and add to empty list of each cell
-    for x in range(0, 11):
+    for x in range(0, len(cells)):
         for index, row in data.iterrows():
             if row.iloc[5 + x] == row.iloc[4]:
                 cells[x].append('1')
@@ -89,34 +85,32 @@ def preproc(infile):
 # Cluster range of phases
 def cluster_phase(infile):
     cells = preproc(infile)
-
     # Set first start position in phase equal to all start position in phase for phase range
-    for x in range(0, 11):
+    for x in range(0, len(cells)):
         for i in range(0, len(cells[x]) - 1):
             if cells[x].loc[i, 'Phase'] == cells[x].loc[i + 1, 'Phase']:
                 cells[x].loc[i + 1, 'Start'] = cells[x].loc[i, 'Start']
                 # Remove duplicates]
-            cells[x].drop_duplicates(subset='Start',keep='last', inplace=True)
-    print(cells[0])
+            cells[x].drop_duplicates(subset='Start', keep='last', inplace=True)
     return cells
 
 
-#Write files to bed files
+# Write files to bed files
 def write_bed(infile, outdir):
     files = cluster_phase(infile)
     filenames = ['_1PB1', '_1PB2', 'Egg1', '_2PB1', '_2PB2', 'Egg2', '_3PB1', '_3PB2', 'Egg3', '_4PB1', '_4PB2', 'Egg4']
 
     if not os.path.exists(outdir):
         os.mkdir(outdir)
-        print("Output directory will be created ", outdir)
-
-    for x in range(0, len(files) - 1):
-        temp = os.path.join(outdir, '{}.bed'.format(filenames[x]))
+        print("Output directory will be created: ", outdir)
+    for x in range(0, len(files)):
+        temp = os.path.join(outdir, '{}.txt'.format(filenames[x]))
         files[x].to_csv(temp, sep='\t')
 
 
 def main():
     infile, outdir = parse_arguments()
+
     write_bed(infile, outdir)
 
 

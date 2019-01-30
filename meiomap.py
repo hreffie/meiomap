@@ -15,7 +15,7 @@ def parse_arguments():
                         required=True,
                         help="Input file is a tab delimited text file containing Chr, Pos, Maternal Genotype, Reference Genotype, Cell Genotype")
     parser.add_argument('--outdir', dest='outdir', required=True,
-                        help="Output directory. Default: cwd")
+                        help="Output directory. If output directory doesn't exist, one will be created.")
     args = parser.parse_args()
     infile = args.infile
     outdir = args.outdir

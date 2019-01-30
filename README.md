@@ -5,6 +5,7 @@ pandas
 argparse
 
 #Installation
+pip install -r requirements.txt 
 git clone https://github.com/hreffie/meiomap.git
 
 #Description 
